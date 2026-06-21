@@ -1,4 +1,11 @@
-// ─── State ───────────────────────────────────────────────────────────────────
+// ─── Config ───────────────────────────────────────────────────────────────────
+// Replace with your Render backend URL after deploying
+const BACKEND_URL = 'https://user-story-analyzer-backend.onrender.com';
+
+// Replace with the APP_SECRET you set in Render environment variables
+const APP_SECRET  = 'Bajrangbali@2022';
+
+// ─── State ────────────────────────────────────────────────────────────────────
 let generatedDoc = '';
 
 // ─── Tab switching ────────────────────────────────────────────────────────────
@@ -13,24 +20,22 @@ function switchTab(name) {
 async function runAnalysis() {
   const biz   = document.getElementById('bizContext').value.trim();
   const story = document.getElementById('userStory').value.trim();
-  const key   = document.getElementById('apiKey').value.trim();
 
   if (!biz || !story) { setStatus('Please fill in both Business Context and User Story.'); return; }
-  if (!key)            { setStatus('Please enter your Anthropic API key.'); return; }
 
   setLoading(true, 'Analyzing — this takes a few moments…');
   resetResults();
 
   try {
-    const [gapsRaw, protoRaw, docsRaw] = await Promise.all([
-      callClaude(key, buildGapPrompt(biz, story)),
-      callClaude(key, buildProtoPrompt(biz, story)),
-      callClaude(key, buildDocPrompt(biz, story)),
+    const [gapsData, protoData, docsData] = await Promise.all([
+      callBackend('/api/gaps',          { businessContext: biz, userStory: story }),
+      callBackend('/api/prototype',     { businessContext: biz, userStory: story }),
+      callBackend('/api/documentation', { businessContext: biz, userStory: story }),
     ]);
 
-    renderGaps(gapsRaw);
-    renderPrototype(protoRaw, story);
-    renderDocs(docsRaw);
+    renderGaps(gapsData);
+    renderPrototype(protoData.html, story);
+    renderDocs(docsData);
 
     setLoading(false, 'Analysis complete ✓');
   } catch (err) {
@@ -38,97 +43,29 @@ async function runAnalysis() {
   }
 }
 
-// ─── Anthropic API call ───────────────────────────────────────────────────────
-async function callClaude(apiKey, userPrompt) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+// ─── Backend API call ─────────────────────────────────────────────────────────
+async function callBackend(path, body) {
+  const res = await fetch(`${BACKEND_URL}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
+      'x-app-secret': APP_SECRET,
     },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1500,
-      messages: [{ role: 'user', content: userPrompt }],
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `API error ${res.status}`);
+    throw new Error(err?.error || `Server error ${res.status}`);
   }
 
-  const data = await res.json();
-  return data.content.filter(b => b.type === 'text').map(b => b.text).join('');
-}
-
-// ─── Prompts ──────────────────────────────────────────────────────────────────
-function buildGapPrompt(biz, story) {
-  return `You are a senior product analyst. Analyze this user story for gaps, risks, and missing details.
-
-Business Context: ${biz}
-
-User Story: ${story}
-
-Respond ONLY with valid JSON — no markdown fences, no preamble:
-{
-  "gaps": [
-    {"severity": "high|medium|low", "title": "short title", "detail": "explanation under 2 sentences"}
-  ],
-  "acceptance_criteria": ["criterion 1", "criterion 2"],
-  "personas": [
-    {"name": "Persona Name", "concern": "what they need that the story doesn't address"}
-  ]
-}
-
-Cover 4–7 gaps across: missing error handling, edge cases, security/auth, performance, accessibility, business rules, and unclear scope.`;
-}
-
-function buildProtoPrompt(biz, story) {
-  return `You are a UX designer. Generate a clean semantic HTML snippet for a realistic UI prototype based on this user story.
-
-Business Context: ${biz}
-User Story: ${story}
-
-Rules:
-- Self-contained HTML snippet (no <html>/<head>/<body> tags)
-- Inline styles only, no external CSS
-- Represent the PRIMARY screen the user interacts with
-- Include realistic form fields, labels, buttons, and placeholder data
-- Single focused screen/form, card-based white layout
-- Approx 40–60 lines of HTML`;
-}
-
-function buildDocPrompt(biz, story) {
-  return `You are a technical writer. Create structured documentation for this user story.
-
-Business Context: ${biz}
-User Story: ${story}
-
-Respond ONLY with valid JSON — no markdown fences, no preamble:
-{
-  "feature_name": "...",
-  "overview": "2–3 sentence summary",
-  "problem_statement": "what problem this solves",
-  "scope": {
-    "in_scope": ["item1", "item2"],
-    "out_of_scope": ["item1", "item2"]
-  },
-  "functional_requirements": ["req1", "req2", "req3", "req4", "req5"],
-  "non_functional_requirements": ["perf", "security", "accessibility"],
-  "dependencies": ["dep1", "dep2"],
-  "open_questions": ["question1", "question2", "question3"]
-}`;
+  return res.json();
 }
 
 // ─── Renderers ────────────────────────────────────────────────────────────────
-function renderGaps(raw) {
-  const data = safeParseJSON(raw);
+function renderGaps(data) {
   if (!data) return;
 
-  // Gaps
   const list = document.getElementById('gap-list');
   list.innerHTML = (data.gaps || []).map(g => {
     const cls = g.severity === 'high' ? 'gap-high' : g.severity === 'medium' ? 'gap-med' : 'gap-low';
@@ -138,13 +75,11 @@ function renderGaps(raw) {
     </div>`;
   }).join('');
 
-  // Acceptance criteria
   document.getElementById('criteria-list').innerHTML =
     (data.acceptance_criteria || [])
       .map(c => `<span class="criteria-chip"><i class="ti ti-check" style="font-size:12px;margin-right:3px;"></i>${c}</span>`)
       .join('');
 
-  // Personas
   document.getElementById('persona-list').innerHTML =
     (data.personas || [])
       .map(p => `<div class="persona-card">
@@ -153,7 +88,6 @@ function renderGaps(raw) {
       </div>`)
       .join('');
 
-  // Badge
   const highCount = (data.gaps || []).filter(g => g.severity === 'high').length;
   const badge = document.getElementById('gap-count');
   badge.textContent = highCount;
@@ -169,11 +103,9 @@ function renderPrototype(html, story) {
   showResults('proto');
 }
 
-function renderDocs(raw) {
-  const d = safeParseJSON(raw);
+function renderDocs(d) {
   if (!d) return;
 
-  // Build markdown for download/copy
   generatedDoc = [
     `# ${d.feature_name || 'Feature Documentation'}`,
     '',
@@ -201,7 +133,6 @@ function renderDocs(raw) {
     ...(d.open_questions || []).map((q, i) => `${i + 1}. ${q}`),
   ].join('\n');
 
-  // Build HTML view
   document.getElementById('doc-content').innerHTML = `
     <div class="doc-section">
       <div class="doc-h2">${d.feature_name || 'Feature'}</div>
@@ -274,15 +205,6 @@ function setLoading(loading, msg) {
 
 function setStatus(msg) {
   document.getElementById('status-msg').textContent = msg;
-}
-
-function safeParseJSON(raw) {
-  try {
-    return JSON.parse(raw.replace(/```json|```/g, '').trim());
-  } catch (e) {
-    console.error('JSON parse error:', e, raw);
-    return null;
-  }
 }
 
 // ─── Export ───────────────────────────────────────────────────────────────────
