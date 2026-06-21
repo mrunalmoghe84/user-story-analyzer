@@ -27,6 +27,16 @@
 
   <!-- INPUT PANEL -->
   <div class="panel active" id="panel-input">
+
+    <!-- GitHub Issue Loader -->
+    <div class="github-bar">
+      <i class="ti ti-brand-github" style="font-size:18px; color:var(--text-secondary);"></i>
+      <select id="issue-select" onchange="fetchIssue()" style="flex:1;">
+        <option value="">Loading GitHub issues...</option>
+      </select>
+      <span id="issue-badge" style="display:none; background:var(--success-light); color:var(--success); font-size:12px; padding:3px 10px; border-radius:20px; font-weight:600;"></span>
+    </div>
+
     <div class="two-col">
       <div>
         <div class="field-label">Business Context</div>
@@ -34,15 +44,18 @@
       </div>
       <div>
         <div class="field-label">User Story</div>
-        <textarea id="userStory" rows="8" placeholder="Write your user story. E.g.: As a merchant, I want to add products to my store so that customers can browse and purchase them. Acceptance criteria: I can upload an image, set a price, and publish the listing."></textarea>
+        <textarea id="userStory" rows="8" placeholder="Write your user story, or select a GitHub issue above to load it automatically. E.g.: As a merchant, I want to add products to my store so that customers can browse and purchase them."></textarea>
       </div>
     </div>
 
-    <div style="display:flex; align-items:center; gap:12px;">
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
       <button class="analyze-btn" onclick="runAnalysis()" id="analyzeBtn">
         <i class="ti ti-sparkles"></i>
         <span id="btnLabel">Analyze Story</span>
         <div class="spinner" id="spinner"></div>
+      </button>
+      <button class="push-btn" id="push-btn" onclick="pushToGitHub()" style="display:none;">
+        <i class="ti ti-brand-github"></i> Push to GitHub
       </button>
       <span id="status-msg"></span>
     </div>
