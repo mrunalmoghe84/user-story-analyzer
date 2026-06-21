@@ -23,12 +23,19 @@ async function loadIssues() {
   const select = document.getElementById('issue-select');
   select.innerHTML = '<option value="">Loading issues...</option>';
   try {
-    const res  = await callBackend('/api/github/issues', 'GET');
+    const res = await fetch(`${BACKEND_URL}/api/github/issues`, {
+      method: 'GET',
+      headers: {
+        'x-app-secret': APP_SECRET,
+      },
+    });
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
     const list = await res.json();
     select.innerHTML = '<option value="">— select an issue —</option>' +
       list.map(i => `<option value="${i.number}">#${i.number} — ${i.title}</option>`).join('');
   } catch (e) {
     select.innerHTML = '<option value="">Failed to load issues</option>';
+    console.error('loadIssues error:', e.message);
   }
 }
 
