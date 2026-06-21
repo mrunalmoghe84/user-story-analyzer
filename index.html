@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Story Analyzer</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="header-icon"><i class="ti ti-analyze"></i></div>
+    <div>
+      <h1>User Story Analyzer</h1>
+      <p>Identify gaps, generate prototypes &amp; documentation automatically</p>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('input')"><i class="ti ti-file-text"></i> Input</div>
+    <div class="tab" onclick="switchTab('gaps')" id="tab-gaps"><i class="ti ti-alert-triangle"></i> Gap Analysis <span class="tab-badge" id="gap-count" style="display:none"></span></div>
+    <div class="tab" onclick="switchTab('prototype')" id="tab-proto"><i class="ti ti-layout"></i> Prototype</div>
+    <div class="tab" onclick="switchTab('docs')" id="tab-docs"><i class="ti ti-book"></i> Documentation</div>
+  </div>
+
+  <!-- INPUT PANEL -->
+  <div class="panel active" id="panel-input">
+    <div class="two-col">
+      <div>
+        <div class="field-label">Business Context</div>
+        <textarea id="bizContext" rows="8" placeholder="Describe the business domain, goals, target users, and constraints. E.g.: We are building an e-commerce platform for small businesses. The primary goal is to allow merchants to list products, manage orders, and receive payments."></textarea>
+      </div>
+      <div>
+        <div class="field-label">User Story</div>
+        <textarea id="userStory" rows="8" placeholder="Write your user story. E.g.: As a merchant, I want to add products to my store so that customers can browse and purchase them. Acceptance criteria: I can upload an image, set a price, and publish the listing."></textarea>
+      </div>
+    </div>
+
+    <div class="api-key-row">
+      <div class="field-label">Anthropic API Key</div>
+      <input type="password" id="apiKey" placeholder="sk-ant-..." />
+      <span class="api-hint">Your key is never stored — used only for this session in your browser.</span>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:12px;">
+      <button class="analyze-btn" onclick="runAnalysis()" id="analyzeBtn">
+        <i class="ti ti-sparkles"></i>
+        <span id="btnLabel">Analyze Story</span>
+        <div class="spinner" id="spinner"></div>
+      </button>
+      <span id="status-msg"></span>
+    </div>
+  </div>
+
+  <!-- GAPS PANEL -->
+  <div class="panel" id="panel-gaps">
+    <div class="empty-state" id="gaps-empty">
+      <i class="ti ti-alert-circle"></i>
+      <span>Run an analysis to see gap findings</span>
+    </div>
+    <div class="results-area" id="gaps-results">
+      <div class="section-card">
+        <div class="section-title danger"><i class="ti ti-alert-circle"></i> Story Gaps &amp; Risks</div>
+        <div id="gap-list"></div>
+      </div>
+      <div class="section-card">
+        <div class="section-title purple"><i class="ti ti-checkbox"></i> Acceptance Criteria Suggestions</div>
+        <div id="criteria-list"></div>
+      </div>
+      <div class="section-card">
+        <div class="section-title teal"><i class="ti ti-users"></i> Additional Personas to Consider</div>
+        <div id="persona-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROTOTYPE PANEL -->
+  <div class="panel" id="panel-prototype">
+    <div class="empty-state" id="proto-empty">
+      <i class="ti ti-layout"></i>
+      <span>Run an analysis to generate a UI prototype</span>
+    </div>
+    <div class="results-area" id="proto-results">
+      <div class="proto-frame">
+        <div class="proto-bar">
+          <div class="proto-dot red"></div>
+          <div class="proto-dot amber"></div>
+          <div class="proto-dot green"></div>
+          <span id="proto-title">Mock Prototype</span>
+        </div>
+        <div class="proto-content" id="proto-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOCS PANEL -->
+  <div class="panel" id="panel-docs">
+    <div class="empty-state" id="docs-empty">
+      <i class="ti ti-book"></i>
+      <span>Run an analysis to generate documentation</span>
+    </div>
+    <div class="results-area" id="docs-results">
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-title" style="margin-bottom:0"><i class="ti ti-file-description"></i> Generated Documentation</div>
+          <div class="export-row">
+            <button class="export-btn" onclick="copyDoc()"><i class="ti ti-copy"></i> Copy</button>
+            <button class="export-btn" onclick="downloadDoc()"><i class="ti ti-download"></i> Download .md</button>
+          </div>
+        </div>
+        <div id="doc-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
